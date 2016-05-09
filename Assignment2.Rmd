@@ -1,0 +1,146 @@
+---
+title: "Reproducible Research: Peer Assessment 2"
+output: 
+  html_document:
+    keep_md: true
+---
+
+# Synopsis
+
+Storms and other severe weather events can cause both public health and economic problems for communities and municipalities. Many severe events can result in fatalities, injuries, and property damage, and preventing such outcomes to the extent possible is a key concern.
+
+This project involves exploring the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage.
+
+## Data Processing
+
+### Setting up the Variables
+
+```{r, echo=TRUE}
+
+rm(list = ls())
+
+
+```
+
+```{r, echo=TRUE}
+
+setwd("C:/Users/nnayar/Documents/Personal/Working Directory/Rep_Research_Assignment2")
+```
+
+
+```{r, echo=TRUE}
+
+
+library(knitr)
+library(markdown)
+library(lattice)
+
+```
+
+### Downloading the data file
+
+```{r, echo=TRUE}
+
+filename <- "StormData.csv.bz2"
+fileurl<-"https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+
+if(!file.exists(filename)){
+        download.file(fileurl, filename, mode = "wb")
+}
+
+if(!file.exists("StormData.csv.bz2")){
+        unzip(filename)
+}
+
+```
+
+### Analysis
+
+In this section we will be loading the data in the appropriate variables and converting the Event Names to upper case.
+
+```{r, echo=TRUE}
+
+data <- read.csv("StormData.csv.bz2",  strip.white = TRUE, stringsAsFactors = FALSE, sep = ",")
+data$EVTYPE = toupper(data$EVTYPE)
+data$YEAR <- as.numeric(format(as.Date(data$BGN_DATE, format = "%m/%d/%Y %H:%M:%S"), "%Y"))
+
+head(data)
+
+```
+
+We don't need all the columns from the original data set so we will remove the columns that are not required
+
+```{r, echo=TRUE}
+
+dataanalysis <- data[,c("STATE", "EVTYPE", "FATALITIES", "INJURIES", "PROPDMG", "PROPDMGEXP","CROPDMG", "CROPDMGEXP","YEAR" )]
+
+```
+
+
+## Results
+
+### Types of events that are most fatal
+
+We will find the events that caused most of the fatalities. Subsequently we will build a histogram showing the number of fatalities for the top 10 events.
+
+
+```{r, echo=TRUE}
+
+fatal <- aggregate (FATALITIES~EVTYPE, dataanalysis, sum)
+fatal <- fatal [order(fatal$FATALITIES, decreasing=TRUE),]
+par(mar=c(12, 6, 1, 1))
+barplot (height = fatal$FATALITIES[1:10], names.arg = fatal$EVTYPE[1:10], las = 2, cex.names= 0.8,
+         col = rainbow (30, start=0, end=0.5))
+title (main = "Top 10 Fatal Events")
+title (ylab = "Total Fatalities")
+
+```
+
+### Types of events that caused the most injuries
+
+We will find the events that caused most of the injuries. Subsequently we will build a histogram showing the number of injuries for the top 10 events.
+
+```{r, echo=TRUE}
+
+injury <- aggregate (INJURIES~EVTYPE, dataanalysis, sum)
+injury <- injury [order(injury$INJURIES, decreasing=TRUE),]
+par(mar=c(12, 6, 1, 1))
+barplot (height = injury$INJURIES[1:10], names.arg = injury$EVTYPE[1:10], las = 2, cex.names = 0.8,
+         col = rainbow (30, start=0, end=0.5))
+title (main = "Top 10 Events for Injuries")
+title (ylab = "Total number of Injuries")
+
+```
+
+### Economic Damages
+
+We will find the total economic damage produced by each type of event, to evaluate those that caused the largest costs.Property and crop damages will be summed-up. Subsequently we will build a histogram for the top 10 events.
+
+```{r, echo=TRUE}
+
+symbol <- c("", "+", "-", "?", 0:9, "h", "H", "k", "K", "m", "M", "b", "B");
+factor <- c(rep(0,4), 0:9, 2, 2, 3, 3, 6, 6, 9, 9)
+multiplier <- data.frame (symbol, factor)
+
+dataanalysis$damage.prop <- dataanalysis$PROPDMG*10^multiplier[match(dataanalysis$PROPDMGEXP,multiplier$symbol),2]
+dataanalysis$damage.crop <- dataanalysis$CROPDMG*10^multiplier[match(dataanalysis$CROPDMGEXP,multiplier$symbol),2]
+dataanalysis$damage <- dataanalysis$damage.prop + dataanalysis$damage.crop
+
+damage <- aggregate (damage~EVTYPE, dataanalysis, sum);
+damage$bilion <- damage$damage / 1e9;
+damage <- damage [order(damage$bilion, decreasing=TRUE),]
+
+par(mar=c(12, 6, 1, 1))
+barplot (height = damage$bilion[1:10], names.arg = damage$EVTYPE[1:10], las = 2, cex.names = 0.8,
+         col = rainbow (30, start=0, end=0.5))
+title ("Top 10 Events causing most damages")
+title (ylab = "Total damage (bilion USD)")
+
+
+```
+
+## Conclusions
+
+1. The most fatal event is "TORNADO"
+2. "TORNADO" also causes the most injuries
+3. "FLOOD" is the event that causes the most economic damage.
